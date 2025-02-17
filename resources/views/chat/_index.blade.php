@@ -85,96 +85,126 @@
 @push('scripts')
 <script>
     // Sample user data (existing chats)
-    let currentChatUser = null;
+    const existingUsers = [
+        { id: 1, name: "Alice Johnson", lastMessage: "Hey, how's it going?" },
+        { id: 2, name: "Bob Smith", lastMessage: "Did you see the latest update?" },
+        { id: 3, name: "Charlie Brown", lastMessage: "Let's catch up soon!" },
+        { id: 4, name: "Diana Ross", lastMessage: "Thanks for your help yesterday." },
+        { id: 5, name: "Ethan Hunt", lastMessage: "Mission accomplished!" },
+        { id: 6, name: "Fiona Green", lastMessage: "Are we still on for lunch?" },
+        { id: 7, name: "George White", lastMessage: "Can you send me that file?" },
+        { id: 8, name: "Hannah Baker", lastMessage: "Happy birthday!" },
+        { id: 9, name: "Ian Foster", lastMessage: "I'll be there in 5 minutes." },
+        { id: 10, name: "Julia Chen", lastMessage: "Great job on the presentation!" },
+        { id: 13, name: "Mike Johnson", lastMessage: "Can we reschedule our call?" },
+        { id: 14, name: "Nancy Garcia", lastMessage: "Thanks for your help!" },
+        { id: 15, name: "Oliver Brown", lastMessage: "See you at the game tonight!" }
+    ];
+
+    // Sample new users data
+    const newUsers = [
+        { id: 16, name: "Patricia Lee", lastMessage: "" },
+        { id: 17, name: "Quinn Adams", lastMessage: "" },
+        { id: 18, name: "Rachel Taylor", lastMessage: "" },
+        { id: 19, name: "Samuel Wilson", lastMessage: "" },
+        { id: 20, name: "Tina Martinez", lastMessage: "" }
+    ];
+
+    let isShowingNewUsers = false;
     const userList = document.getElementById('userList');
     const newMessageBtn = document.getElementById('newMessageBtn');
+    const newMessageBtnText = document.getElementById('newMessageBtnText');
     const userSearch = document.getElementById('userSearch');
-    const chatInput = document.getElementById('chatInput');
-    const chatMessages = document.getElementById('chatMessages');
 
-    async function loadConversations(search = '') {
-        try {
-            const response = await fetch(`conversations?search=${encodeURIComponent(search)}`);
-            const data  = await response.json();
-            // console.log(data)
-            populateConversationList(data.conversations);
-        } catch (error) {
-            console.error('Error loading conversations:', error);
-        }
-    }
-
-    async function loadNewUsers(search = '') {
-        try {
-            const response = await fetch(`users?search=${encodeURIComponent(search)}`);
-            const data = await response.json();
-            // console.log(data)
-            populateNewUserList(data.users);
-        } catch (error) {
-            console.error('Error loading users:', error);
-        }
-    }
-
-    function populateConversationList(conversations) {
+    function populateUserList(users, isNew = false) {
         userList.innerHTML = '';
-        conversations.forEach(convo => {
+        users.forEach(user => {
             const userDiv = document.createElement('div');
             userDiv.className = 'p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition duration-150 ease-in-out';
             userDiv.innerHTML = `
                 <div class="flex items-center">
                     <div class="w-12 h-12 bg-gray-300 rounded-full mr-4"></div>
-                    <div class="flex-1">
-                        <h3 class="font-semibold text-gray-800">${convo.name}</h3>
-                        <p class="text-sm text-gray-500 truncate">${convo.last_message}</p>
-                    </div>
-                </div>
-            `;
-            userDiv.addEventListener('click', () => openChat(convo.user));
-            userList.appendChild(userDiv);
-        });
-    }
-
-    function populateNewUserList(users) {
-        userList.innerHTML = '';
-        users.forEach(user => {
-            const userDiv = document.createElement('div');
-            userDiv.className = 'p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition duration-150 ease-in-out bg-blue-50';
-            userDiv.innerHTML = `
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-gray-300 rounded-full mr-4"></div>
                     <div>
                         <h3 class="font-semibold text-gray-800">${user.name}</h3>
-                            <p class="text-sm ${user.has_conversation ? 'text-gray-500' : 'text-blue-500'}">
-                            ${user.has_conversation ? 'Existing Chat' : 'New Contact'}
-                        </p>
+                        ${isNew ? '<p class="text-sm text-blue-500">New Contact</p>' : `<p class="text-sm text-gray-500 truncate">${user.lastMessage}</p>`}
                     </div>
                 </div>
             `;
-            userDiv.addEventListener('click', () => startNewChat(user));
+            userDiv.addEventListener('click', () => openChat(user));
             userList.appendChild(userDiv);
         });
     }
 
-    // Event listeners
-    newMessageBtn.addEventListener('click', async () => {
-        if (newMessageBtn.textContent.includes('New Message')) {
-            await loadNewUsers();
-            newMessageBtn.textContent = 'Back to Chats';
+    function toggleNewMessageList() {
+        isShowingNewUsers = !isShowingNewUsers;
+        if (isShowingNewUsers) {
+            populateUserList(newUsers, true);
+            newMessageBtnText.textContent = 'Back to Chats';
         } else {
-            await loadConversations();
-            newMessageBtn.textContent = 'New Message';
+            populateUserList(existingUsers);
+            newMessageBtnText.textContent = 'New Message';
         }
+    }
+
+    newMessageBtn.addEventListener('click', toggleNewMessageList);
+
+    // Chat functionality
+    const chatHeader = document.getElementById('chatHeader');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const emptyStateMessage = document.getElementById('emptyStateMessage');
+
+    function openChat(user) {
+        chatHeader.innerHTML = `
+            <div class="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
+            <h2 class="text-xl font-semibold text-gray-800">${user.name}</h2>
+        `;
+        chatMessages.innerHTML = user.lastMessage ? `
+            <div class="flex justify-start">
+                <div class="bg-gray-100 rounded-lg p-3 max-w-xs">
+                    <p class="text-sm">${user.lastMessage}</p>
+                </div>
+            </div>
+        ` : '';
+        emptyStateMessage.classList.add('hidden');
+        chatInput.classList.remove('hidden');
+
+        // On mobile, switch to chat view
+        if (window.innerWidth < 640) {
+            sidebar.classList.add('hidden');
+            chatArea.classList.remove('hidden');
+        }
+
+        // If it's a new user, add them to the existing users list
+        if (isShowingNewUsers) {
+            const existingUser = existingUsers.find(u => u.id === user.id);
+            if (!existingUser) {
+                existingUsers.unshift({ ...user, lastMessage: "New conversation started" });
+            }
+            toggleNewMessageList(); // Switch back to existing chats
+        }
+    }
+
+    // Toggle chat area on mobile
+    const toggleChat = document.getElementById('toggleChat');
+    const sidebar = document.getElementById('sidebar');
+    const chatArea = document.getElementById('chatArea');
+
+    toggleChat.addEventListener('click', () => {
+        sidebar.classList.toggle('hidden');
+        chatArea.classList.toggle('hidden');
     });
 
-    userSearch.addEventListener('input', async (e) => {
-        const search = e.target.value;
-        if (newMessageBtn.textContent.includes('Back to Chats')) {
-        // console.log(search);
-
-            await loadNewUsers(search);
-        } else {
-            await loadConversations(search);
+    // Responsive behavior
+    function handleResize() {
+        if (window.innerWidth >= 640) { // sm breakpoint
+            sidebar.classList.remove('hidden');
+            chatArea.classList.remove('hidden');
         }
-    });
+    }
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial call
 
     // Profile dropdown functionality
     const profileDropdown = document.getElementById('profileDropdown');
@@ -191,7 +221,15 @@
         }
     });
 
-    // Initial load
-    loadConversations();
+    // Search functionality
+    userSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const usersToSearch = isShowingNewUsers ? newUsers : existingUsers;
+        const filteredUsers = usersToSearch.filter(user => user.name.toLowerCase().includes(searchTerm));
+        populateUserList(filteredUsers, isShowingNewUsers);
+    });
+
+    // Initial population of user list
+    populateUserList(existingUsers);
 </script>
 @endpush

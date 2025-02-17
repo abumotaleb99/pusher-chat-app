@@ -20,5 +20,9 @@ Route::middleware('auth')->group(function () {
     Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
     
     // Chat
-    Route::post('chat/{user}', [ChatController::class, 'store'])->name('chat.store');
+    Route::get('chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('conversations', [ChatController::class, 'getConversations']);
+    Route::get('users', [ChatController::class, 'searchUsers']);
+    Route::get('/messages/{user}', [ChatController::class, 'getMessages']);
+    Route::post('/messages/{user}', [ChatController::class, 'sendMessage']);
 });
