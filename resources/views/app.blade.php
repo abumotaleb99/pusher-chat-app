@@ -12,6 +12,7 @@
       background-color: rgba(0, 0, 0, 0.5);
     }
   </style>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body class="bg-gray-100">
   @yield('content')

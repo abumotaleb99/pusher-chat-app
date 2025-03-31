@@ -25,4 +25,6 @@ Route::middleware('auth')->group(function () {
     Route::get('users', [ChatController::class, 'searchUsers']);
     Route::get('/messages/{user}', [ChatController::class, 'getMessages']);
     Route::post('/messages/{user}', [ChatController::class, 'sendMessage']);
+
+    Route::get('/users/{id}', [ChatController::class, 'show']);
 });

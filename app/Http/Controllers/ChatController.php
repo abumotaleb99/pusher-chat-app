@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Message;
+use App\Events\NewMessageEvent;
 use Illuminate\Validation\Validator;
 use Illuminate\Support\Facades\Auth;
 
@@ -112,13 +113,46 @@ class ChatController extends Controller
         }
     }
 
-
-
-
-    // Get messages for specific conversation
-    public function getMessages(User $user)
+    public function show($id)
     {
         try {
+            $requestedUser = User::findOrFail($id);
+            $authUserId = Auth::id();
+    
+            return response()->json([
+                'id' => $requestedUser->id,
+                'first_name' => $requestedUser->first_name,
+                'last_name' => $requestedUser->last_name,
+                'email' => $requestedUser->email,
+                'profile_photo' => $requestedUser->profile_photo_url,
+                'has_conversation' => Message::where(function($query) use ($authUserId, $id) {
+                    $query->where('sender_id', $authUserId)
+                          ->where('receiver_id', $id);
+                })->orWhere(function($query) use ($authUserId, $id) {
+                    $query->where('sender_id', $id)
+                          ->where('receiver_id', $authUserId);
+                })->exists()
+            ]);
+    
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'User not found'
+            ], 404);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to fetch user details',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Get messages for specific conversation
+    public function getMessages($userId)
+    {
+        try {
+            $user = User::findOrFail($userId);
+
             // Mark messages as read when opening conversation
             Message::where('sender_id', $user->id)
                 ->where('receiver_id', Auth::id())
@@ -151,34 +185,38 @@ class ChatController extends Controller
     }
 
     // Send new message
-    public function sendMessage(Request $request, User $user)
+    public function sendMessage(Request $request, $userId)
     {
-        $validator = Validator::make($request->all(), [
-            'message' => 'required|string|max:1000'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'errors' => $validator->errors(),
-                'status' => 'error'
-            ], 422);
-        }
-
+        // \Log::info($request->all());
+        // \Log::info($userId);
+        // $validator = Validator::make($request->all(), [
+        //     'message' => 'required|string|max:1000'
+        // ]);
+    
+        // if ($validator->fails()) {
+        //     return response()->json([
+        //         'errors' => $validator->errors(),
+        //         'status' => 'error'
+        //     ], 422);
+        // }
+    
         try {
             $message = Message::create([
                 'sender_id' => Auth::id(),
-                'receiver_id' => $user->id,
+                'receiver_id' => $userId,
                 'message' => $request->message
             ]);
-
-            // Load relationship for response
+    
+            // Load sender relationship
             $message->load('sender');
 
+            // broadcast(new NewMessageEvent($message, auth()->id(), $userId))->toOthers();
+    
             return response()->json([
                 'message' => $message,
                 'status' => 'success'
             ], 201);
-
+    
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error sending message',
@@ -250,4 +288,6 @@ class ChatController extends Controller
             })
             ->exists();
     }
+
+    
 }
